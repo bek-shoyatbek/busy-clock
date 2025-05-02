@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Busy Timer</title>
+  <style>
+    :root {
+      --bg-light: #f0f0f0;
+      --text-light: #111;
+      --bg-dark: #111;
+      --text-dark: #f0f0f0;
+      --accent: #00bcd4;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .sidebar {
+      width: 300px;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 1rem;
+      overflow-y: auto;
+      border-right: 1px solid #444;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s;
+    }
+
+    body.fullscreen .sidebar {
+      display: none;
+    }
+
+    .sidebar h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .task-list {
+      list-style: none;
+      padding-left: 0;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .task-list li {
+      background-color: rgba(255, 255, 255, 0.1);
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .task-list .meta {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .task-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .task-form input,
+    .task-form select,
+    .task-form button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .task-form button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .busy-text {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .timer {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .quote {
+      font-size: 1.5rem;
+      margin: 1rem;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    .controls label {
+      font-size: 1.1rem;
+    }
+
+    #minutesInput {
+      padding: 0.5rem;
+      font-size: 1.2rem;
+      width: 100px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #222;
+      color: #fff;
+    }
+
+    .controls button {
+      padding: 0.5rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: var(--accent);
+      color: #fff;
+      transition: background-color 0.3s;
+    }
+
+    .controls button:hover {
+      background-color: #0097a7;
+    }
+
+    .theme-toggle, .fullscreen-toggle {
+      position: absolute;
+      top: 10px;
+      background: transparent;
+      border: 1px solid currentColor;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .theme-toggle {
+      right: 10px;
+    }
+
+    .fullscreen-toggle {
+      left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Tasks</h2>
+    <ul class="task-list" id="taskList"></ul>
+
+    <div class="task-form">
+      <input type="text" id="taskInput" placeholder="Task description" />
+      <input type="time" id="taskTime" />
+      <select id="taskPriority">
+        <option value="Low">Low Priority</option>
+        <option value="Medium">Medium Priority</option>
+        <option value="High">High Priority</option>
+      </select>
+      <button onclick="addTask()">Add Task</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <button class="theme-toggle">Toggle Theme</button>
+    <button class="fullscreen-toggle" onclick="toggleFullscreen()">Fullscreen</button>
+    <div class="busy-text" id="busyText">Please Do Not Disturb</div>
+    <div class="timer" id="timerDisplay">00:00</div>
+    <div class="quote" id="quote">Loading quote...</div>
+
+    <div class="controls">
+      <label for="minutesInput">Set Timer (minutes)</label>
+      <input type="number" id="minutesInput" min="1" value="5" />
+      <button onclick="startTimer()">Start</button>
+    </div>
+  </div>
+
+  <script>
+    const busyTexts = [
+      "In a Deep Work Session",
+      "Focused Mode Enabled",
+      "Currently Unavailable",
+      "Productivity in Progress",
+      "Please Do Not Disturb",
+      "Do Not Disrupt",
+      "Creative Flow in Progress",
+      "Mind at Work",
+      "Locked In",
+      "No Interruptions, Please"
+    ];
+
+    let timerInterval;
+
+    function getRandomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function updateBusyText() {
+      document.getElementById("busyText").textContent = getRandomItem(busyTexts);
+    }
+
+    function fetchQuote() {
+      fetch("https://api.quotable.io/random?tags=time")
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById("quote").textContent = `"${data.content}" — ${data.author}`;
+        })
+        .catch(() => {
+          document.getElementById("quote").textContent = "Could not load quote.";
+        });
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      const minutes = parseInt(document.getElementById("minutesInput").value);
+      let seconds = minutes * 60;
+      updateBusyText();
+      fetchQuote();
+
+      function updateDisplay() {
+        const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const sec = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById("timerDisplay").textContent = `${min}:${sec}`;
+        if (seconds > 0) {
+          seconds--;
+        } else {
+          clearInterval(timerInterval);
+        }
+      }
+
+      updateDisplay();
+      timerInterval = setInterval(updateDisplay, 1000);
+    }
+
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle("light-theme");
+      document.body.style.backgroundColor = isDark ? "var(--bg-light)" : "var(--bg-dark)";
+      document.body.style.color = isDark ? "var(--text-light)" : "var(--text-dark)";
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        document.body.classList.add('fullscreen');
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+          document.body.classList.remove('fullscreen');
+        }
+      }
+    }
+
+    function addTask() {
+      const taskInput = document.getElementById("taskInput");
+      const taskTime = document.getElementById("taskTime").value;
+      const taskPriority = document.getElementById("taskPriority").value;
+      const taskList = document.getElementById("taskList");
+
+      const taskText = taskInput.value.trim();
+      if (taskText) {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${taskText}</strong><div class="meta">${taskTime ? '⏰ ' + taskTime : ''} ${taskPriority ? '| 🔥 ' + taskPriority : ''}</div>`;
+        taskList.appendChild(li);
+        taskInput.value = "";
+        document.getElementById("taskTime").value = "";
+        document.getElementById("taskPriority").value = "Low";
+      }
+    }
+
+    document.querySelector(".theme-toggle").addEventListener("click", toggleTheme);
+    fetchQuote();
+    updateBusyText();
+  </script>
+</body>
+</html>
