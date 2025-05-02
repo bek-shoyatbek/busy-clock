@@ -291,6 +291,14 @@
     }
 
     document.querySelector(".theme-toggle").addEventListener("click", toggleTheme);
+
+    // Add keyboard shortcut for fullscreen: 'f' key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      }
+    });
+
     fetchQuote();
     updateBusyText();
   </script>
