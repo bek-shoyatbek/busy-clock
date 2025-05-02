@@ -225,15 +225,17 @@
     }
 
     function fetchQuote() {
-      fetch("https://api.quotable.io/random?tags=time")
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("quote").textContent = `"${data.content}" — ${data.author}`;
-        })
-        .catch(() => {
-          document.getElementById("quote").textContent = "Could not load quote.";
-        });
-    }
+  fetch("https://zenquotes.io/api/random")
+    .then(response => response.json())
+    .then(data => {
+      const quote = data[0];
+      document.getElementById("quote").textContent = `"${quote.q}" — ${quote.a}`;
+    })
+    .catch(() => {
+      document.getElementById("quote").textContent = "Could not load quote.";
+    });
+}
+
 
     function startTimer() {
       clearInterval(timerInterval);
