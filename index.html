@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link type="image/png" sizes="16x16" rel="icon" href="icons8-clock-cool-16.png">
   <title>Busy Timer</title>
   <style>
     :root {
@@ -62,6 +63,16 @@
     .task-list .meta {
       font-size: 0.9rem;
       opacity: 0.8;
+    }
+
+    .task-list .meta span {
+      cursor: pointer;
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .task-list .meta span:hover {
+      color: #0097a7;
     }
 
     .task-form {
@@ -184,6 +195,22 @@
       margin: 5px;
     }
 
+    /* Full-screen icon styling */
+    .fullscreen-icon {
+      position: absolute;
+      top: 10px;
+      right: 50px;
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: var(--accent);
+      transition: transform 0.2s, color 0.3s;
+    }
+
+    .fullscreen-icon:hover {
+      transform: scale(1.2);
+      color: #0097a7;
+    }
+
     /* Hide the controls section in full-screen mode */
     body.fullscreen .controls {
       display: none;
@@ -197,7 +224,7 @@
 
     <div class="task-form">
       <input type="text" id="taskInput" placeholder="Task description" />
-      <input type="time" id="taskTime" />
+      <input type="number" id="taskTime" placeholder="Timer (mins)" min="1" />
       <select id="taskPriority">
         <option value="Low">Low Priority</option>
         <option value="Medium">Medium Priority</option>
@@ -208,6 +235,7 @@
   </div>
 
   <div class="main-content">
+    <i class="fullscreen-icon" onclick="toggleFullscreen()">⛶</i>
     <button class="theme-toggle">Toggle Theme</button>
     <div class="busy-text" id="busyText">Please Do Not Disturb</div>
     <div class="timer" id="timerDisplay">00:00</div>
@@ -216,7 +244,7 @@
       <label for="minutesInput">Set Timer (minutes)</label>
       <input type="number" id="minutesInput" min="1" value="5" />
       <button onclick="startTimer()">Start</button>
-      <button onclick="toggleFullscreen()">Fullscreen</button>
+      <button onclick="pauseTimer()">Pause</button>
     </div>
   </div>
 
@@ -235,6 +263,8 @@
     ];
 
     let timerInterval;
+    let isPaused = false;
+    let remainingSeconds = 0;
 
     function getRandomItem(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
@@ -244,27 +274,29 @@
       document.getElementById("busyText").textContent = getRandomItem(busyTexts);
     }
 
-
-
-    function startTimer() {
+    function startTimer(minutes = null) {
       clearInterval(timerInterval);
-      const minutes = parseInt(document.getElementById("minutesInput").value);
-      let seconds = minutes * 60;
+      const inputMinutes = minutes || parseInt(document.getElementById("minutesInput").value);
+      remainingSeconds = inputMinutes * 60;
       updateBusyText();
 
       function updateDisplay() {
-        const min = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const sec = (seconds % 60).toString().padStart(2, '0');
+        const min = Math.floor(remainingSeconds / 60).toString().padStart(2, '0');
+        const sec = (remainingSeconds % 60).toString().padStart(2, '0');
         document.getElementById("timerDisplay").textContent = `${min}:${sec}`;
-        if (seconds > 0) {
-          seconds--;
-        } else {
+        if (remainingSeconds > 0 && !isPaused) {
+          remainingSeconds--;
+        } else if (remainingSeconds === 0) {
           clearInterval(timerInterval);
         }
       }
 
       updateDisplay();
       timerInterval = setInterval(updateDisplay, 1000);
+    }
+
+    function pauseTimer() {
+      isPaused = !isPaused;
     }
 
     function toggleTheme() {
@@ -290,9 +322,9 @@
       const taskList = document.getElementById("taskList");
 
       const taskText = taskInput.value.trim();
-      if (taskText) {
+      if (taskText && taskTime) {
         const li = document.createElement("li");
-        li.innerHTML = `<strong>${taskText}</strong><div class="meta">${taskTime ? '⏰ ' + taskTime : ''} ${taskPriority ? '| 🔥 ' + taskPriority : ''}</div>`;
+        li.innerHTML = `<strong>${taskText}</strong><div class="meta"><span onclick="startTimer(${taskTime})">⏰ ${taskTime} mins</span> ${taskPriority ? '| 🔥 ' + taskPriority : ''}</div>`;
         taskList.appendChild(li);
         taskInput.value = "";
         document.getElementById("taskTime").value = "";
@@ -302,12 +334,15 @@
 
     document.querySelector(".theme-toggle").addEventListener("click", toggleTheme);
 
-    // Add keyboard shortcut for fullscreen: 'f' key
+    // Add keyboard shortcuts
     document.addEventListener("keydown", function (e) {
       if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
+      } else if (e.key === "p" || e.key === "P") {
+        pauseTimer();
       }
     });
+
     updateBusyText();
   </script>
 </body>
